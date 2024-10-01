@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #a2c2e2, #f2f2f2);
+            color: #333;
+        }
+
+        #chat-container {
+            width: 500px;
+            height: 80vh;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid #ddd;
+        }
+
+        #chat-box {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .message-container {
+            display: flex;
+            margin: 10px 0;
+            align-items: center;
+        }
+
+        .user-message {
+            background-color: #d4edda;
+            color: #155724;
+            align-self: flex-end;
+            margin-left: auto;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding-right: 30px;
+            position: relative;
+        }
+
+        .cross-icon {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: none;
+        }
+
+        .complaint-message.selected .cross-icon {
+            display: inline;
+        }
+
+        .user-message,
+        .bot-response,
+        .complaint-message {
+            padding: 15px;
+            border-radius: 15px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .bot-response {
+            background-color: #e2e3e5;
+            color: #383d41;
+            align-self: flex-start;
+            margin-right: auto;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .complaint-message {
+            background-color: #d1e7dd;
+            color: #0f5132;
+            align-self: flex-start;
+            margin-right: auto;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            border: 1px solid #b0bec5;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease;
+        }
+
+        .complaint-message:hover {
+            background-color: #c3e6cb;
+        }
+
+        .complaint-message.selected {
+            background-color: #a5d8a5;
+        }
+
+        #chat-form {
+            display: flex;
+            padding: 10px;
+            background-color: #f1f1f1;
+            border-top: 1px solid #ddd;
+        }
+
+        #attach-btn {
+            background-color: #e0e0e0;
+            border: 1px solid #b3b3b3;
+            border-radius: 5px;
+            color: #1d1a1a;
+            cursor: pointer;
+            padding: 6px 8px;
+            transition: background-color 0.3s ease;
+            margin-right: 10px;
+            font-size: 12px;
+        }
+
+        #attach-btn:hover {
+            background-color: #d0d0d0;
+        }
+
+        #options {
+            display: none;
+            position: absolute;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            margin-top: 5px;
+            width: 120px;
+        }
+
+        .option {
+            padding: 10px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .option:hover {
+            background-color: #f1f1f1;
+        }
+
+        #user-msg {
+            flex-grow: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fff;
+            color: #333;
+            font-size: 16px;
+        }
+
+        #send-btn,
+        #submit-complaints {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+            margin-left: 10px;
+        }
+
+        #send-btn {
+            background-color: #007bff;
+        }
+
+        #send-btn:hover {
+            background-color: #0056b3;
+        }
+
+        #submit-complaints {
+            background-color: #28a745;
+        }
+
+        #submit-complaints:hover {
+            background-color: #218838;
+        }
+
+        #scanner-modal,
+        #face-scanner-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+        }
+
+        .scanner-container,
+        .face-scanner-container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        #video {
+            width: 100%;
+            max-width: 400px;
+            margin: 20px auto;
+            border: 2px solid #ccc;
+        }
+
+        #face-video {
+            width: 100%;
+            max-width: 400px;
+            margin: 20px auto;
+            border: 2px solid #ccc;
+        }
+
+        canvas {
+            display: none;
+        }
+
+        #output {
+            margin-top: 20px;
+            font-size: 20px;
+            color: green;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chat-container">
+        <div id="chat-box">
+            <div class="message-container">
+                <div class="bot-response">Hi! How can I help you today?</div>
+            </div>
+        </div>
+        <form id="chat-form">
+            <button type="button" id="attach-btn"><i class="fas fa-paperclip"></i></button>
+            <div id="options">
+                <div class="option" id="scanner-option">Scanner</div>
+                <div class="option" id="face-scanner-option">Face Scanner</div>
+                <div class="option" id="gallery-option">Gallery</div>
+            </div>
+            <input type="text" id="user-msg" name="msg" required placeholder="Type your message here...">
+            <button type="submit" id="send-btn">Send</button>
+            <button type="button" id="submit-complaints">Submit Selected Complaints</button>
+        </form>
+    </div>
+
+    <div id="scanner-modal" class="scanner-modal">
+        <div class="scanner-container">
+            <h1>QR Code Scanner</h1>
+            <video id="video" autoplay></video>
+            <canvas id="canvas" hidden></canvas>
+            <div id="output">Scan a QR Code</div>
+            <button id="close-scanner" style="margin-top: 20px;">Close</button>
+        </div>
+    </div>
+
+    <div id="face-scanner-modal" class="face-scanner-modal">
+        <div class="face-scanner-container">
+            <h1>Face Scanner</h1>
+            <video id="face-video" autoplay></video>
+            <canvas id="face-canvas" hidden></canvas>
+            <div id="face-output">Detecting face...</div>
+            <button id="close-face-scanner" style="margin-top: 20px;">Close</button>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.3.1/dist/jsQR.js"></script>
+    <script>
+        $(document).ready(function () {
+            $('#attach-btn').on('click', function () {
+                $('#options').toggle();
+            });
+
+            $('.option').on('click', function () {
+                const option = $(this).attr('id');
+                $('#options').hide();
+
+                if (option === 'scanner-option') {
+                    $('#scanner-modal').css('display', 'flex');
+                    startScanner();
+                } else if (option === 'face-scanner-option') {
+                    $('#face-scanner-modal').css('display', 'flex');
+                    startFaceScanner();
+                }
+            });
+
+            $('#close-scanner').on('click', function () {
+                $('#scanner-modal').hide();
+                stopScanner();
+            });
+
+            $('#close-face-scanner').on('click', function () {
+                $('#face-scanner-modal').hide();
+                stopFaceScanner();
+            });
+
+            $('#chat-form').on('submit', function (e) {
+                e.preventDefault();
+                const message = $('#user-msg').val();
+                $('#user-msg').val('');
+
+                $('#chat-box').append(`
+                    <div class="message-container">
+                        <div class="user-message">${message} <span class="cross-icon">✖</span></div>
+                    </div>
+                `);
+                // Simulate bot response
+                $('#chat-box').append(`
+                    <div class="message-container">
+                        <div class="bot-response">You said: ${message}</div>
+                    </div>
+                `);
+                $('#chat-box').scrollTop($('#chat-box')[0].scrollHeight);
+            });
+
+            $('#submit-complaints').on('click', function () {
+                // Logic to handle complaints
+                alert("Complaints submitted!");
+            });
+        });
+
+        // QR Code Scanner
+        let scannerInterval;
+
+        function startScanner() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const output = document.getElementById('output');
+
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function (stream) {
+                    video.srcObject = stream;
+                    video.setAttribute('playsinline', true); // required to tell iOS Safari we don't want full screen
+                    video.play();
+                    scannerInterval = setInterval(() => {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const imageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
+                        const code = jsQR(imageData.data, canvas.width, canvas.height);
+
+                        if (code) {
+                            output.innerText = `QR Code Data: ${code.data}`;
+                            clearInterval(scannerInterval);
+                            stopScanner();
+                        }
+                    }, 300);
+                })
+                .catch(err => console.error("Error accessing camera: ", err));
+        }
+
+        function stopScanner() {
+            const video = document.getElementById('video');
+            const stream = video.srcObject;
+            const tracks = stream.getTracks();
+
+            tracks.forEach(track => track.stop());
+            video.srcObject = null;
+            clearInterval(scannerInterval);
+        }
+
+        // Face Scanner
+        function startFaceScanner() {
+            const video = document.getElementById('face-video');
+            const canvas = document.getElementById('face-canvas');
+            const output = document.getElementById('face-output');
+
+            // Load face-api models
+            Promise.all([
+                faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
+                faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+                faceapi.nets.faceRecognitionNet.loadFromUri('/models')
+            ]).then(startVideo);
+
+            function startVideo() {
+                navigator.mediaDevices.getUserMedia({ video: {} })
+                    .then((stream) => {
+                        video.srcObject = stream;
+                        detectFace();
+                    })
+                    .catch((err) => {
+                        console.error("Error accessing camera: ", err);
+                    });
+            }
+
+            function detectFace() {
+    const displaySize = { width: video.width, height: video.height };
+    faceapi.matchDimensions(canvas, displaySize);
+
+    setInterval(async () => {
+        const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
+        const resizedDetections = faceapi.resizeResults(detections, displaySize);
+        canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+
+        // Draw detections and landmarks
+        faceapi.draw.drawDetections(canvas, resizedDetections);
+        faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
+
+        // Debugging log
+        console.log(`Detections: ${JSON.stringify(detections)}`);
+
+        if (detections.length > 0) {
+            output.innerText = `Face detected!`;
+        } else {
+            output.innerText = `No face detected.`;
+        }
+    }, 100);
+}
+
+        }
+
+        function stopFaceScanner() {
+            const video = document.getElementById('face-video');
+            const stream = video.srcObject;
+            const tracks = stream.getTracks();
+
+            tracks.forEach(track => track.stop());
+            video.srcObject = null;
+        }
+    </script>
+    <script defer src="https://unpkg.com/@vladmandic/face-api/dist/face-api.min.js"></script>
+</body>
+
+</html>

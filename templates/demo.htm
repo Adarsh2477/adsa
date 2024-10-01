@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Chatbot</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #a2c2e2, #f2f2f2);
+            color: #333;
+        }
+
+        #chat-container {
+            width: 500px;
+            height: 80vh;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid #ddd;
+        }
+
+        #chat-box {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .message-container {
+            display: flex;
+            margin: 10px 0;
+            align-items: center;
+        }
+
+        .user-message,
+        .bot-response,
+        .complaint-message {
+            padding: 15px;
+            border-radius: 15px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .user-message {
+            background-color: #d4edda;
+            color: #155724;
+            align-self: flex-end;
+            margin-left: auto;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .bot-response {
+            background-color: #e2e3e5;
+            color: #383d41;
+            align-self: flex-start;
+            margin-right: auto;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .complaint-message {
+            background-color: #d1e7dd;
+            color: #0f5132;
+            align-self: flex-start;
+            margin-right: auto;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            border: 1px solid #b0bec5;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease;
+        }
+
+        .complaint-message:hover {
+            background-color: #c3e6cb;
+        }
+
+        .complaint-message.selected {
+            background-color: #a5d8a5;
+        }
+
+        .cross-icon {
+            display: none;
+            margin-left: 10px;
+            cursor: pointer;
+            color: #dc3545;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .complaint-message.selected .cross-icon {
+            display: inline;
+        }
+
+        #chat-form {
+            display: flex;
+            padding: 10px;
+            background-color: #f1f1f1;
+            border-top: 1px solid #ddd;
+        }
+
+        #user-msg {
+            flex-grow: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fff;
+            color: #333;
+            font-size: 16px;
+        }
+
+        #send-btn,
+        #submit-complaints {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+            margin-left: 10px;
+        }
+
+        #send-btn {
+            background-color: #007bff;
+        }
+
+        #send-btn:hover {
+            background-color: #0056b3;
+        }
+
+        #submit-complaints {
+            background-color: #28a745;
+        }
+
+        #submit-complaints:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chat-container">
+        <div id="chat-box">
+            <!-- Chat history will be appended here -->
+            <!-- Example chat history (to be replaced by server-side code) -->
+            <!-- <div class="message-container">
+                <div class="user-message">Hello</div>
+            </div> -->
+            <div class="message-container">
+                <div class="bot-response">Hi! How can I help you today?</div>
+            </div>
+        </div>
+        <form id="chat-form">
+            <input type="text" id="user-msg" name="msg" required placeholder="Type your message here...">
+            <button type="submit" id="send-btn">Send</button>
+            <button type="button" id="submit-complaints">Submit Selected Complaints</button>
+        </form>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            var selectedComplaints = [];
+            var complaintsLocked = false;
+
+            // Handle form submission
+            $('#chat-form').on('submit', function (e) {
+                e.preventDefault();
+                var userMsg = $('#user-msg').val();
+                $('#chat-box').append('<div class="message-container"><div class="user-message">' + userMsg + '</div></div>');
+                $('#user-msg').val('');
+                $('#chat-box').scrollTop($('#chat-box')[0].scrollHeight);
+
+                $.ajax({
+                    type: 'POST',
+                    url: '/send',
+                    data: { msg: userMsg },
+                    success: function (response) {
+                        $('#chat-box').append('<div class="message-container"><div class="bot-response">' + response.response + '</div></div>');
+                        $('#chat-box').scrollTop($('#chat-box')[0].scrollHeight);
+
+                        // Show complaint messages if the response contains them
+                        if (response.response.includes("Please select the symptoms you are experiencing")) {
+                            $('.complaint-message').show();
+                        } else {
+                            $('.complaint-message').hide();
+                        }
+
+                        // Unlock complaints for new selection
+                        complaintsLocked = false;
+                    }
+                });
+            });
+
+            // Handle complaint message selection
+            $(document).on('click', '.complaint-message', function () {
+                if (!$(this).hasClass('locked') && !complaintsLocked) { // Only allow selection if not locked
+                    var complaintText = $(this).text().replace('\u2715', '').trim();
+                    $(this).toggleClass('selected'); // Toggle selection
+
+                    // Add or remove complaint from the selected list
+                    if ($(this).hasClass('selected')) {
+                        selectedComplaints.push(complaintText);
+                    } else {
+                        selectedComplaints = selectedComplaints.filter(function (value) {
+                            return value !== complaintText;
+                        });
+                    }
+                }
+            });
+
+            // Handle cross icon click to deselect complaint
+            $(document).on('click', '.cross-icon', function (e) {
+                e.stopPropagation();
+                var complaintMessage = $(this).closest('.complaint-message');
+                var complaint = complaintMessage.text().replace('×', '').trim();
+                complaintMessage.removeClass('selected');
+                selectedComplaints = selectedComplaints.filter(c => c !== complaint);
+            });
+
+            // Handle submit selected complaints
+            $('#submit-complaints').on('click', function () {
+                if (selectedComplaints.length > 0 && !complaintsLocked) {
+                    var userMsg = 'I have ' + selectedComplaints.join(' and ');
+                    $('#chat-box').append('<div class="message-container"><div class="user-message">' + userMsg + '</div></div>');
+                    $('#user-msg').val('');
+                    $('#chat-box').scrollTop($('#chat-box')[0].scrollHeight);
+
+                    $.ajax({
+                        type: 'POST',
+                        url: '/send',
+                        data: { msg: userMsg, 'selected_symptoms[]': selectedComplaints },
+                        success: function (response) {
+                            $('#chat-box').append('<div class="message-container"><div class="bot-response">' + response.response + '</div></div>');
+                            $('#chat-box').scrollTop($('#chat-box')[0].scrollHeight);
+
+                            // Lock the selected complaint messages after submission
+                            $('.complaint-message.selected').addClass('locked'); // Lock selected messages
+                            $('.complaint-message').removeClass('selected'); // Clear selection
+                            complaintsLocked = true; // Lock complaints until new user message
+                        },
+                        error: function () {
+                            alert('Error sending message. Please try again.');
+                        }
+                    });
+
+                    // Clear selected complaints after submission
+                    selectedComplaints = [];
+                } else {
+                    alert('Please select at least one complaint.');
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
